@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.idea/
+*.log
+
+# веб-вьюер и локальный автозапуск — больше не используются, парсер теперь на GitHub Actions
+web.py
+run_parser.bat
+setup_autostart.ps1

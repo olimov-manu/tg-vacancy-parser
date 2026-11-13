@@ -1,0 +1,41 @@
+name: Vacancy parser
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: vacancy-parser
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run parser
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python tg_vacancy_parser.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_posts.json vacancies.db
+          git diff --cached --quiet || git commit -m "chore: update parser state [skip ci]"
+          git push
