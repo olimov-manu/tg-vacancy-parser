@@ -76,7 +76,7 @@
   "DevOpsSRE_Jobs": 8292,
   "JobsforDevsandOps": 606,
   "bykvaadm": 2795,
-  "devops_jobs_feed": 24047,
+  "devops_jobs_feed": 24048,
   "devopssjob": 2270,
   "fordevops": 5497,
   "sysadmin_jobs": 1244,
@@ -260,10 +260,10 @@
   "agilefluent": 4674,
   "User_Acquisition_Job": 1352,
   "huggabletalents": 3201,
-  "proffreelancee": 8038,
+  "proffreelancee": 8040,
   "runello_rus_datascience": 4033,
   "runello_rus_webdesign": 3515,
-  "runello_rus_digitalmarketing": 5238,
+  "runello_rus_digitalmarketing": 5242,
   "vakansii_it": 5310,
   "time2find": 1,
   "runello_rus_contentmanagement": 4004,
@@ -275,5 +275,6 @@
   "Uz_Intern": 1165,
   "projavascript": 507,
   "uzpythonjobs": 795,
-  "remote_job_android": 334
+  "remote_job_android": 334,
+  "zhurec": 2
 }
