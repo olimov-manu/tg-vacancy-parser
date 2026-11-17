@@ -27,7 +27,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
 
 SITE_STATE_FILE = Path("seen_site_jobs.json")
-SEND_ON_FIRST_RUN = True   # True — при первом запуске отправить все текущие открытые вакансии компании
+SEND_ON_FIRST_RUN = False   # True — при первом запуске отправить все текущие открытые вакансии компании
 
 # Компании и их ATS. slug — это и есть "токен борда", видимый в URL карьерной
 # страницы (jobs.lever.co/<slug>, boards.greenhouse.io/<slug> и т.д.).
