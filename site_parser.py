@@ -147,6 +147,7 @@ def _safe_truncate(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     cut = text[:limit]
+    cut = re.sub(r"<[^>]*$", "", cut)   # обрезали прямо внутри <b> или </b> — убираем обрывок тега
     unclosed = cut.count("<b>") - cut.count("</b>")
     if unclosed > 0:
         cut += "</b>" * unclosed
