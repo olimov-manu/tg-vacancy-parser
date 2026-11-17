@@ -28,6 +28,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import db
+import site_parser
 
 # ================== НАСТРОЙКИ ==================
 
@@ -161,6 +162,12 @@ CHANNELS = [
     "itworkrussia", "golang_jobsgo", "candy_shop_it", "jobgolang",
     "helloworldagencyfaq", "little_driver_jobs", "hirix_today", "refer_me_it",
     "hrlunapark", "fordev",
+
+    # --- Добавлено вручную, по личному опыту с офферами (2026-11-17) ---
+    "gogetajob", "goutstaff", "GolangJobsit", "DarikaINITVacancies",
+    "BlockHire", "web30job", "vacancy_cs", "haas_vacancies", "golang_job",
+    "itvector_go_jobs", "itvector_python_jobs", "itvector_analyst_jobs",
+    "itvector_data_jobs", "itvector_devops_jobs",
 ]
 
 # Обязательные слова: пост должен содержать ХОТЯ БЫ ОДНО из них.
@@ -325,10 +332,12 @@ def main():
         raise SystemExit("Задай BOT_TOKEN и CHAT_ID (переменные окружения)")
 
     state = load_state()
+    site_state = site_parser.load_site_state()
     conn = db.connect()
-    print(f"Старт. Каналов: {len(CHANNELS)}")
+    print(f"Старт. Каналов: {len(CHANNELS)}, компаний (сайты): {len(site_parser.COMPANIES)}")
     try:
         run_once(state, conn)
+        site_parser.run_once(site_state, conn, send_to_bot, max_workers=MAX_WORKERS)
     finally:
         conn.close()
     print("Готово.")
