@@ -16,6 +16,7 @@
 Перед запуском напиши своему боту /start, иначе он не сможет тебе писать.
 """
 
+import html as html_lib
 import json
 import os
 import re
@@ -265,11 +266,11 @@ def fetch_posts(channel: str, retries: int = 3):
 
 def send_to_bot(text: str) -> None:
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    if len(text) > 4000:                                # лимит Telegram — 4096
-        text = text[:4000] + "…"
+    text = site_parser._safe_truncate(text, 4000)       # лимит Telegram — 4096; не рвёт <b> посередине
     resp = requests.post(url, json={
         "chat_id": CHAT_ID,
         "text": text,
+        "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }, timeout=20)
     if resp.status_code == 429:                         # флуд-контроль
@@ -299,7 +300,8 @@ def process_channel(channel: str, posts: list, state: dict, conn) -> None:
             if is_match(text):
                 print(f"[{channel}] подходит: {link}")
                 db.save_vacancy(conn, channel, post_id, link, text, posted_at)
-                send_to_bot(f"📢 @{channel}\n🔗 {link}\n\n{text}")
+                safe_text = html_lib.escape(text[:3000], quote=False)
+                send_to_bot(f"📢 @{channel}\n🔗 {link}\n\n{safe_text}")
                 time.sleep(1)
         except Exception:
             print(f"[{channel}] ошибка на посте {post_id}, пропускаю:")

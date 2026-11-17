@@ -9,6 +9,7 @@
 как второй, persistent слой защиты от повторной отправки одной и той же вакансии.
 """
 
+import html as html_lib
 import json
 import re
 import time
@@ -91,10 +92,65 @@ def is_match(text: str) -> bool:
     return True
 
 
-def _strip_html(html: str) -> str:
-    if not html:
+# Теги, после которых описание вакансии должно продолжаться с новой строки
+# (абзацы, списки, заголовки, таблицы, <br>) — то есть всё, что визуально
+# выглядит как перенос строки в оригинальной разметке ATS.
+_BLOCK_TAGS = {
+    "p", "div", "li", "ul", "ol", "br", "h1", "h2", "h3", "h4", "h5", "h6",
+    "tr", "table", "section", "blockquote", "hr",
+}
+# <strong>/<b> сохраняем как телеграмный <b> (единственный тег, который реально
+# остаётся в отправляемом тексте — остальная разметка просто выбрасывается).
+_BOLD_TAGS = {"b", "strong"}
+
+
+def _html_node_to_text(node) -> str:
+    if isinstance(node, str):
+        return html_lib.escape(str(node), quote=False)
+
+    name = getattr(node, "name", None)
+    if name == "br":
+        return "\n"
+
+    inner = "".join(_html_node_to_text(c) for c in getattr(node, "children", []))
+
+    if name in _BOLD_TAGS:
+        return f"<b>{inner}</b>" if inner.strip() else inner
+    if name in _BLOCK_TAGS:
+        return f"\n{inner}\n"
+    return inner
+
+
+def _strip_html(raw: str) -> str:
+    """HTML вакансии -> безопасный текст под Telegram parse_mode=HTML:
+    теги-переносы строк (<p>, <li>, <br> и т.п.) превращаются в \\n, <b>/<strong>
+    остаются как телеграмный <b>, весь остальной HTML выбрасывается, а обычный
+    текст экранируется (& < >), чтобы Telegram не споткнулся на "сыром" HTML."""
+    if not raw:
         return ""
-    return BeautifulSoup(html, "html.parser").get_text("\n").strip()
+    # ATS типа Greenhouse отдают content уже раз HTML-заэскейпленным (т.е. сама
+    # разметка хранится как "&lt;div&gt;..." внутри JSON) — снимаем один слой
+    # энкодинга, чтобы добраться до настоящих тегов. Для источников, где html
+    # уже "живой" (Lever/Workable/Ashby), unescape лишь нормализует сущности
+    # типа "&amp;" внутри текста и не трогает сами теги.
+    unescaped = html_lib.unescape(raw)
+    soup = BeautifulSoup(unescaped, "html.parser")
+    text = _html_node_to_text(soup)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _safe_truncate(text: str, limit: int) -> str:
+    """Режет текст до limit символов, но не обрывает <b> ровно посередине —
+    иначе Telegram вернёт ошибку 'can't parse entities' на незакрытом теге."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    unclosed = cut.count("<b>") - cut.count("</b>")
+    if unclosed > 0:
+        cut += "</b>" * unclosed
+    return cut + "…"
 
 
 def _local_tag(tag: str) -> str:
@@ -107,7 +163,7 @@ def fetch_greenhouse(slug: str):
     r.raise_for_status()
     jobs = []
     for j in r.json().get("jobs", []):
-        title = j.get("title", "")
+        title = html_lib.escape(j.get("title", ""), quote=False)
         content = _strip_html(j.get("content", ""))
         jobs.append((str(j["id"]), f"{title}\n\n{content}", j.get("absolute_url", ""), j.get("updated_at")))
     return jobs
@@ -119,7 +175,7 @@ def fetch_lever(slug: str):
     r.raise_for_status()
     jobs = []
     for j in r.json():
-        title = j.get("text", "")
+        title = html_lib.escape(j.get("text", ""), quote=False)
         desc = _strip_html(j.get("description") or j.get("descriptionPlain") or "")
         lists_text = "\n".join(_strip_html(lst.get("content", "")) for lst in j.get("lists", []))
         text = f"{title}\n\n{desc}\n{lists_text}".strip()
@@ -141,7 +197,7 @@ def fetch_workable(slug: str):
     jobs = []
     for j in r.json().get("jobs", []):
         job_id = str(j.get("shortcode") or j.get("id"))
-        title = j.get("title", "")
+        title = html_lib.escape(j.get("title", ""), quote=False)
         desc = _strip_html(j.get("description") or j.get("full_description") or "")
         text = f"{title}\n\n{desc}".strip()
         posted_at = j.get("published_on") or j.get("created_at")
@@ -157,7 +213,8 @@ def fetch_smartrecruiters(slug: str):
     for j in r.json().get("content", []):
         job_id = str(j["id"])
         link = j.get("applyUrl") or f"https://jobs.smartrecruiters.com/{slug}/{job_id}"
-        jobs.append((job_id, j.get("name", ""), link, j.get("releasedDate")))
+        name_text = html_lib.escape(j.get("name", ""), quote=False)
+        jobs.append((job_id, name_text, link, j.get("releasedDate")))
     return jobs
 
 
@@ -167,7 +224,7 @@ def fetch_ashby(slug: str):
     r.raise_for_status()
     jobs = []
     for j in r.json().get("jobs", []):
-        title = j.get("title", "")
+        title = html_lib.escape(j.get("title", ""), quote=False)
         desc = _strip_html(j.get("descriptionHtml", ""))
         text = f"{title}\n\n{desc}".strip()
         link = j.get("jobUrl") or j.get("applyUrl", "")
@@ -189,7 +246,8 @@ def fetch_personio(slug: str):
         if not job_id:
             continue
         link = fields.get("careerSiteUrl") or f"https://{slug}.jobs.personio.de/job/{job_id}"
-        jobs.append((job_id, fields.get("name", ""), link, fields.get("createdAt")))
+        name_text = html_lib.escape(fields.get("name", ""), quote=False)
+        jobs.append((job_id, name_text, link, fields.get("createdAt")))
     return jobs
 
 
@@ -236,10 +294,15 @@ def process_company(company: dict, jobs: list, state: dict, conn, send_to_bot) -
         if first_run and not SEND_ON_FIRST_RUN:
             continue
         try:
-            if is_match(text):
+            # text может содержать <b>/</b> (сохранённую разметку жирного) — для
+            # матчинга по стеку используем версию без тегов, чтобы "<b>Go</b>,
+            # Python" матчился так же, как обычное "Go, Python".
+            plain_text = text.replace("<b>", "").replace("</b>", "")
+            if is_match(plain_text):
                 print(f"[site:{name}] подходит: {link}")
                 db.save_site_vacancy(conn, name, job_id, link, text, posted_at)
-                send_to_bot(f"🏢 {name}\n🔗 {link}\n\n{text[:1500]}")
+                body = _safe_truncate(text, 1500)
+                send_to_bot(f"🏢 {html_lib.escape(name, quote=False)}\n🔗 {html_lib.escape(link, quote=False)}\n\n{body}")
                 time.sleep(1)
         except Exception:
             print(f"[site:{name}] ошибка на вакансии {job_id}, пропускаю:")
