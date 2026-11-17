@@ -156,6 +156,11 @@ CHANNELS = [
     "runello_rus_contentmanagement", "time2find", "fr_free", "green_light_career",
     "edu_traveler", "heddoworld", "it_vakansii_jobs", "freelancekp", "uzpythonjobs",
     "frontEndJobo", "premiumvacancy", "Uz_Intern", "projavascript",
+
+    # --- Добавлено вручную (2026-11-17) ---
+    "itworkrussia", "golang_jobsgo", "candy_shop_it", "jobgolang",
+    "helloworldagencyfaq", "little_driver_jobs", "hirix_today", "refer_me_it",
+    "hrlunapark", "fordev",
 ]
 
 # Обязательные слова: пост должен содержать ХОТЯ БЫ ОДНО из них.
