@@ -28,6 +28,7 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
+import custom_parser
 import db
 import site_parser
 
@@ -335,11 +336,14 @@ def main():
 
     state = load_state()
     site_state = site_parser.load_site_state()
+    custom_state = custom_parser.load_state()
     conn = db.connect()
-    print(f"Старт. Каналов: {len(CHANNELS)}, компаний (сайты): {len(site_parser.COMPANIES)}")
+    print(f"Старт. Каналов: {len(CHANNELS)}, компаний (API): {len(site_parser.COMPANIES)}, "
+          f"компаний (прямой скрейпинг): {len(custom_parser.CUSTOM_COMPANIES)}")
     try:
         run_once(state, conn)
         site_parser.run_once(site_state, conn, send_to_bot, max_workers=MAX_WORKERS)
+        custom_parser.run_once(custom_state, conn, send_to_bot)
     finally:
         conn.close()
     print("Готово.")

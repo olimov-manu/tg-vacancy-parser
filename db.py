@@ -37,6 +37,20 @@ def connect():
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_site_parsed_at ON site_vacancies(parsed_at)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS custom_vacancies (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            company    TEXT    NOT NULL,
+            job_id     TEXT    NOT NULL,
+            link       TEXT    NOT NULL,
+            text       TEXT    NOT NULL,
+            posted_at  TEXT,
+            parsed_at  TEXT    NOT NULL,
+            UNIQUE(company, job_id)
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_custom_parsed_at ON custom_vacancies(parsed_at)")
     return conn
 
 
@@ -52,6 +66,15 @@ def save_vacancy(conn, channel, post_id, link, text, posted_at):
 def save_site_vacancy(conn, company, job_id, link, text, posted_at):
     conn.execute(
         "INSERT OR IGNORE INTO site_vacancies (company, job_id, link, text, posted_at, parsed_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (company, job_id, link, text, posted_at, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+
+
+def save_custom_vacancy(conn, company, job_id, link, text, posted_at):
+    conn.execute(
+        "INSERT OR IGNORE INTO custom_vacancies (company, job_id, link, text, posted_at, parsed_at) "
         "VALUES (?, ?, ?, ?, ?, ?)",
         (company, job_id, link, text, posted_at, datetime.now().isoformat(timespec="seconds")),
     )
