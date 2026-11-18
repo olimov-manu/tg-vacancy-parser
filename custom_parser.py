@@ -39,7 +39,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
                          "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
 
 CUSTOM_STATE_FILE = Path("seen_custom_jobs.json")
-SEND_ON_FIRST_RUN = False   # True — при первом запуске отправить все текущие открытые вакансии компании
+SEND_ON_FIRST_RUN = True   # True — при первом запуске отправить все текущие открытые вакансии компании
 ALERT_COOLDOWN_HOURS = 24   # не долбить в бот об одной и той же поломке чаще раза в сутки
 
 
